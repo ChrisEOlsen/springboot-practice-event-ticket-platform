@@ -1,11 +1,13 @@
 services:
   db:
-    image: postgres:15
+    image: postgres:17
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     command: ["postgres", "-p", "${POSTGRES_PORT}"]
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT}:${POSTGRES_PORT}"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -25,6 +27,9 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SERVER_PORT: ${BACKEND_PORT}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-event-ticket-platform}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:-http://localhost:9090/realms/${KEYCLOAK_REALM:-event-ticket-platform}}
+      KEYCLOAK_JWK_SET_URI: http://keycloak:9090/realms/${KEYCLOAK_REALM:-event-ticket-platform}/protocol/openid-connect/certs
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
 
@@ -36,5 +41,27 @@ services:
     ports:
       - "${FRONTEND_PORT}:${FRONTEND_PORT}"
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.1
+    command: ["start-dev", "--http-port=9090"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+    ports:
+      - "9090:9090"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+
+  adminer:
+    image: adminer:6.1.2
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ADMINER_DEFAULT_SERVER: db:${POSTGRES_PORT}
+    ports:
+      - "${ADMINER_PORT:-8888}:8080"
+
 volumes:
   postgres_data:
+  keycloak_data:

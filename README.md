@@ -1,6 +1,6 @@
 # Spring Boot + Angular + PostgreSQL template
 
-A local development foundation with three Docker Compose services. Generate the application sources and add the Dockerfiles below before starting Compose.
+A local development foundation with four Docker Compose services. Generate the application sources and add the Dockerfiles below before starting Compose.
 
 ## 1. Create the root directory and clone
 
@@ -99,7 +99,7 @@ cp .env.example .env
 chmod 600 .env
 ```
 
-Edit `.env`: choose a database username, strong local password, database name, and available application ports. `POSTGRES_PORT` configures the database's internal listening port; it is not exposed to the host. Use simple alphanumeric/underscore database names and usernames. Quote values containing Compose-special characters as described in the [Compose environment-file syntax](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/#env-file-syntax).
+Edit `.env`: choose a database username, strong local password, database name, and available application ports. `POSTGRES_PORT` configures the database listening port and publishes it on localhost for backend runs from IntelliJ. Use simple alphanumeric/underscore database names and usernames. Adminer is exposed on host port `8081` by default; set `ADMINER_PORT` in `.env` to change it. Quote values containing Compose-special characters as described in the [Compose environment-file syntax](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/#env-file-syntax).
 
 Add `.env` to your root `.gitignore` before committing. Keep `.env.example` tracked and never commit real credentials.
 
@@ -117,6 +117,9 @@ With the example ports, open:
 
 - Frontend: `http://localhost:4200`
 - Backend: `http://localhost:8080`
+- Adminer: `http://localhost:8081`
+
+Log in to Adminer with the database credentials from `.env`; the Server field is prefilled with `db:<POSTGRES_PORT>`.
 
 Substitute your `.env` port values if changed. Browser API requests must use `http://localhost:<BACKEND_PORT>`; `backend` is a Docker-internal hostname. Before making frontend API calls, configure backend CORS for `http://localhost:<FRONTEND_PORT>` or add an Angular development proxy. Compose alone does not configure browser API routing.
 
@@ -130,3 +133,7 @@ docker-compose down
 Database data persists in the named `postgres_data` volume across restarts. Changing database credentials in `.env` does not update an already initialized database; alter the existing database roles/settings or deliberately recreate its data volume. `docker-compose down --volumes` deletes that data permanently.
 
 Run backend tests with `./mvnw test` inside `backend/` (provide a test database or test profile when tests need PostgreSQL). Run frontend tests with `npm test` inside `frontend/`. The example backend image build skips tests so that packaging does not require a database during image creation; run tests separately before shipping.
+
+## Run the backend in IntelliJ
+
+Start PostgreSQL with `docker compose up -d db` from the repository root. Run `BackendApplication` with the working directory set to the repository root or `backend/`. The backend reads the root `.env` as a Java properties file and builds a local JDBC URL from `POSTGRES_PORT` and `POSTGRES_DB`. Keep these local values unquoted (the generated credentials use safe alphanumeric characters). Explicit `SPRING_DATASOURCE_*` environment variables override the defaults; remove any malformed URL from your IntelliJ run configuration. Compose continues to supply its internal database URL when running the backend container.
